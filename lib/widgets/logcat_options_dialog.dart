@@ -1,5 +1,6 @@
 import 'package:adb_connector/models/logcat_options.dart';
 import 'package:adb_connector/services/terminal_service.dart';
+import 'package:adb_connector/theme/vaulta.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -14,12 +15,23 @@ class LogcatOptionsDialog extends StatefulWidget {
 
 class _LogcatOptionsDialogState extends State<LogcatOptionsDialog> {
   static const _formats = [
-    'color', 'threadtime', 'time', 'brief', 'tag', 'raw', 'long',
+    'color',
+    'threadtime',
+    'time',
+    'brief',
+    'tag',
+    'raw',
+    'long',
   ];
 
   static const _suggestedTags = [
-    'flutter', 'System.err', 'ActivityManager', 'AndroidRuntime',
-    'chromium', 'dalvikvm', 'OpenGLRenderer',
+    'flutter',
+    'System.err',
+    'ActivityManager',
+    'AndroidRuntime',
+    'chromium',
+    'dalvikvm',
+    'OpenGLRenderer',
   ];
 
   static const _bufferOptions = ['main', 'system', 'crash', 'events', 'all'];
@@ -38,7 +50,8 @@ class _LogcatOptionsDialogState extends State<LogcatOptionsDialog> {
   void initState() {
     super.initState();
     _installedApps = TerminalService.instance.installedApps();
-    _selectedTerminalId = widget.initialTerminalId ??
+    _selectedTerminalId =
+        widget.initialTerminalId ??
         (_installedApps.isNotEmpty ? _installedApps.first.id : null);
   }
 
@@ -65,14 +78,14 @@ class _LogcatOptionsDialogState extends State<LogcatOptionsDialog> {
   }
 
   LogcatOptions _buildOptions() => LogcatOptions(
-        format: _format,
-        tags: List.unmodifiable(_tags),
-        buffers: List.unmodifiable(_buffers),
-        regexFilter: _regexController.text.trim().isEmpty
-            ? null
-            : _regexController.text.trim(),
-        maxLines: int.tryParse(_maxLinesController.text.trim()),
-      );
+    format: _format,
+    tags: List.unmodifiable(_tags),
+    buffers: List.unmodifiable(_buffers),
+    regexFilter: _regexController.text.trim().isEmpty
+        ? null
+        : _regexController.text.trim(),
+    maxLines: int.tryParse(_maxLinesController.text.trim()),
+  );
 
   String get _previewCommand {
     final args = ['logcat', ..._buildOptions().toArgs()];
@@ -101,16 +114,13 @@ class _LogcatOptionsDialogState extends State<LogcatOptionsDialog> {
                 DropdownButtonFormField<String>(
                   initialValue: _selectedTerminalId,
                   decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
                     isDense: true,
                     prefixIcon: Icon(Icons.terminal, size: 18),
                   ),
                   items: _installedApps
                       .map(
-                        (a) => DropdownMenuItem(
-                          value: a.id,
-                          child: Text(a.name),
-                        ),
+                        (a) =>
+                            DropdownMenuItem(value: a.id, child: Text(a.name)),
                       )
                       .toList(),
                   onChanged: (v) => setState(() => _selectedTerminalId = v),
@@ -123,10 +133,7 @@ class _LogcatOptionsDialogState extends State<LogcatOptionsDialog> {
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
                 initialValue: _format,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  isDense: true,
-                ),
+                decoration: const InputDecoration(isDense: true),
                 items: _formats
                     .map((f) => DropdownMenuItem(value: f, child: Text(f)))
                     .toList(),
@@ -143,7 +150,6 @@ class _LogcatOptionsDialogState extends State<LogcatOptionsDialog> {
                     child: DropdownButtonFormField<String>(
                       decoration: const InputDecoration(
                         hintText: '태그 선택 또는 직접 입력',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                       items: _suggestedTags
@@ -151,7 +157,9 @@ class _LogcatOptionsDialogState extends State<LogcatOptionsDialog> {
                             (t) => DropdownMenuItem(value: t, child: Text(t)),
                           )
                           .toList(),
-                      onChanged: (v) { if (v != null) _addTag(v); },
+                      onChanged: (v) {
+                        if (v != null) _addTag(v);
+                      },
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -161,7 +169,6 @@ class _LogcatOptionsDialogState extends State<LogcatOptionsDialog> {
                       controller: _tagInputController,
                       decoration: const InputDecoration(
                         hintText: '직접 입력',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                       onSubmitted: _addTag,
@@ -205,7 +212,6 @@ class _LogcatOptionsDialogState extends State<LogcatOptionsDialog> {
                     child: DropdownButtonFormField<String>(
                       decoration: const InputDecoration(
                         hintText: '버퍼 추가',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                       items: _bufferOptions
@@ -246,7 +252,6 @@ class _LogcatOptionsDialogState extends State<LogcatOptionsDialog> {
                 controller: _regexController,
                 decoration: const InputDecoration(
                   hintText: 'E/ActivityManager|I/flutter',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
                 onChanged: (_) => setState(() {}),
@@ -260,7 +265,6 @@ class _LogcatOptionsDialogState extends State<LogcatOptionsDialog> {
                 controller: _maxLinesController,
                 decoration: const InputDecoration(
                   hintText: '제한 없음',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
                 keyboardType: TextInputType.number,
@@ -282,11 +286,11 @@ class _LogcatOptionsDialogState extends State<LogcatOptionsDialog> {
           onPressed: _selectedTerminalId == null
               ? null
               : () => Navigator.of(context).pop(
-                    LogcatRunConfig(
-                      options: _buildOptions(),
-                      terminalId: _selectedTerminalId!,
-                    ),
+                  LogcatRunConfig(
+                    options: _buildOptions(),
+                    terminalId: _selectedTerminalId!,
                   ),
+                ),
         ),
       ],
     );
@@ -299,9 +303,9 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(
-        text,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-      );
+    text,
+    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+  );
 }
 
 class _PreviewBanner extends StatelessWidget {
@@ -309,20 +313,24 @@ class _PreviewBanner extends StatelessWidget {
   final String command;
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(6),
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: dark ? Vaulta.bg : Vaulta.lightBg,
+        borderRadius: BorderRadius.circular(Vaulta.radiusChip),
+        border: Border.all(color: dark ? Vaulta.stroke : Vaulta.lightStroke),
+      ),
+      child: Text(
+        command,
+        style: TextStyle(
+          fontSize: 11,
+          fontFamily: 'monospace',
+          color: dark ? Vaulta.accentBright : Vaulta.actionCircle,
         ),
-        child: Text(
-          command,
-          style: TextStyle(
-            fontSize: 11,
-            fontFamily: 'monospace',
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-      );
+      ),
+    );
+  }
 }

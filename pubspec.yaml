@@ -1,14 +1,18 @@
 name: adb_connector
 description: ADB Wireless Connector for macOS
-version: 1.0.1+2
+version: 1.1.0+3
 publish_to: none
 
 environment:
   sdk: ^3.11.0
 
 dependencies:
+  auto_updater: ^1.0.0
   desktop_drop: ^0.7.1
+  desktop_multi_window: ^0.3.1
   file_picker: ^11.0.2
+  flutter_pty: ^0.4.2
+  xterm: ^4.0.0
   flutter:
     sdk: flutter
 
@@ -18,3 +22,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - scripts/mcp_bridge.py

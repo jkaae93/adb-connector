@@ -1,151 +1,315 @@
-# ADB Connector
+<p align="center">
+  <a href="https://github.com/jkaae93/adb_connector">
+    <picture>
+      <source srcset="assets/app_icon.svg">
+      <img src="assets/app_icon.svg" alt="ADB Connector logo" width="128">
+    </picture>
+  </a>
+</p>
 
-Android / iOS 기기를 무선으로 연결하고 관리하는 macOS 데스크톱 앱입니다. `adb connect`, logcat, 파일 전송 같은 명령어를 터미널 없이 GUI 버튼으로 다룰 수 있습니다.
+<h1 align="center">ADB Connector</h1>
 
-## 다운로드
+<p align="center">
+  Connect and manage Android / iOS devices wirelessly from your Mac.<br>
+  <code>adb connect</code>, logcat, and file transfer — no terminal required.
+</p>
 
-[ADB Connector v1.0.1 macOS 다운로드](https://github.com/jkaae93/adb_connector/releases/download/v1.0.1/ADB-Connector-v1.0.1-macos.zip)
+<p align="center">
+  <a href="./README.ko.md">한국어</a> · <a href="https://github.com/jkaae93/adb_connector/releases/latest">Download</a>
+</p>
 
-## 주요 기능
+<p align="center">
+  <a href="https://github.com/jkaae93/adb_connector/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/jkaae93/adb_connector?style=flat-square&label=Download" /></a>
+  <img alt="Platform: macOS" src="https://img.shields.io/badge/macOS-Apple_Silicon_%7C_Intel-black?style=flat-square&logo=apple&logoColor=white" />
+  <img alt="Flutter" src="https://img.shields.io/badge/Flutter-3.41-02569B?style=flat-square&logo=flutter&logoColor=white" />
+  <a href="#license"><img alt="License" src="https://img.shields.io/badge/License-Free_to_use_and_modify-blue.svg?style=flat-square" /></a>
+</p>
 
-- **무선 ADB 연결**: 저장된 기기를 버튼 하나로 무선 연결 (`adb connect`)
-- **USB → 무선 전환**: USB로 연결된 기기를 클릭 한 번으로 무선 디버깅 모드로 전환 (`adb tcpip`)
-- **기기 자동 감지·저장**: USB로 꽂기만 하면 IP·시리얼·모델명을 자동 감지해 저장, 다음부터는 무선으로 바로 연결
-- **연결 상태 실시간 표시**: 5초마다 자동 갱신, USB/WiFi 연결 상태 뱃지 표시
-- **Logcat 뷰어**: 앱 내 실시간 로그 뷰어 제공. 원하면 Terminal, iTerm2, Warp 등 외부 터미널에서도 실행 가능 (전체 / Flutter 전용 / 커스텀 필터 프리셋)
-- **파일 브라우저**: 기기 파일 시스템 탐색, 드래그&드롭 업로드, 파일 다운로드 (`adb push`/`pull`)
-- **iPhone/iPad 지원**: libimobiledevice 설치 시 iOS 기기 감지 및 syslog 확인
-- **빠른 연결**: 저장 없이 IP만 입력해 일회성 연결
-- **ADB 자동 설치**: ADB가 없으면 Google 공식 platform-tools를 자동 다운로드·설치
+<details>
+<summary><strong>Your wireless device dashboard.</strong></summary>
 
-## 시스템 요구사항
+[![Stars](https://img.shields.io/github/stars/jkaae93/adb_connector?style=flat-square&label=Stars)](https://github.com/jkaae93/adb_connector/stargazers)
+[![Last commit](https://img.shields.io/github/last-commit/jkaae93/adb_connector?style=flat-square&label=Updated)](https://github.com/jkaae93/adb_connector/commits)
+[![Issues](https://img.shields.io/github/issues/jkaae93/adb_connector?style=flat-square&label=Issues)](https://github.com/jkaae93/adb_connector/issues)
 
-- macOS (Apple Silicon / Intel)
-- Android 기기: 개발자 옵션에서 **USB 디버깅** 활성화 (무선 연결 시 기기와 Mac이 같은 WiFi에 있어야 함)
-- (선택) iOS 기기 지원: `brew install libimobiledevice`
+</details>
+<p></p>
+Our philosophy:
 
-## 설치 방법 (배포된 앱 사용)
+```text
+→ click not type
+→ wireless not tethered
+→ one window not five terminals
+→ approved automation not blind scripts
+```
 
-1. 배포된 `ADB Connector.app`(또는 zip)을 받아 `/Applications` 폴더로 드래그합니다.
-2. 이 앱은 개발자 서명이 없어 처음 실행 시 macOS가 차단할 수 있습니다. 아래 중 한 가지 방법으로 실행하세요.
-   - **방법 A**: 앱 아이콘을 **우클릭(Control+클릭) → 열기 → 열기** 버튼 클릭 (최초 1회만)
-   - **방법 B**: 터미널에서 격리 속성 제거
-     ```bash
-     xattr -cr "/Applications/ADB Connector.app"
-     ```
-   - macOS Sequoia 이상에서 우클릭 열기가 안 되면: **시스템 설정 → 개인정보 보호 및 보안** 하단의 "그래도 열기" 버튼을 사용하세요.
-3. 실행 후 상단에 ADB 설치 배너가 보이면 **설치** 버튼을 누르세요. Google 공식 platform-tools를 자동으로 내려받아 설치합니다. (Android Studio나 Homebrew로 이미 ADB가 설치된 경우 자동으로 해당 경로를 사용합니다.)
+<p align="center">
+  ⭐ Star the repo for updates · Watch <a href="https://github.com/jkaae93/adb_connector/releases">Releases</a> for new versions.
+</p>
 
-## 사용 방법
+<!-- TODO: Add GIF demo of USB plug-in → wireless switch → logcat workflow -->
 
-### 1. 기기 최초 등록 (USB)
+## See it in action
 
-1. Android 기기를 USB로 Mac에 연결
-2. 기기 화면에서 **USB 디버깅 허용** 팝업 승인
-3. 앱이 자동으로 기기 정보(IP, 시리얼, 모델명)를 감지하고 목록에 저장합니다.
+```text
+You: plug in Android phone via USB
+App: detected Pixel 8 · 192.168.0.12 · serial saved ✓
 
-### 2. USB → 무선 전환
+You: click "Switch to wireless"
+App: adb tcpip 5555 → reconnected over WiFi ✓ (unplug the cable)
 
-USB로 연결된 기기 항목의 **무선 전환** 버튼을 누르면 `adb tcpip` 실행 후 무선으로 재연결됩니다. 이후 USB 케이블을 뽑아도 연결이 유지됩니다.
+You: click "Connect" next morning
+App: adb connect 192.168.0.12:5555 ✓ (auto-retries over serial)
 
-### 3. 무선 연결 / 해제
+You: click log / file buttons
+App: live logcat stream · drag & drop files to device ✓
 
-- 저장된 기기의 **연결** 버튼: `adb connect {ip}:{port}` 실행. 실패하면 시리얼 기반으로 `adb tcpip` 재초기화 후 자동 재시도합니다.
-- **연결 해제** 버튼: `adb disconnect` 실행
+AI agent: GET /devices (local MCP server, token auth)
+App: approval prompt → you approve → result returned ✓
+```
 
-### 4. Logcat 보기
+<details>
+<summary><strong>What does the AI-agent setup actually look like?</strong></summary>
 
-기기 항목의 로그 버튼으로 실행합니다.
+Turn on the local MCP server in Settings, copy the HTTP or stdio snippet into your MCP client, and approve each sensitive action in the app:
 
-- **앱 내 뷰어**: 실시간 로그 스트리밍, 버퍼 클리어 지원
-- **터미널에서 열기**: Terminal, iTerm2, Warp, Alacritty, kitty, Ghostty, Hyper 중 설치된 앱 선택
-  - **전체**: 필터 없이 전체 로그
-  - **Flutter**: `flutter` 태그만 필터링
-  - **커스텀**: 출력 포맷, 태그, 버퍼, 정규식 필터, 최대 줄 수 지정
-- iOS 기기는 logcat 대신 **syslog**(idevicesyslog)를 표시합니다.
+```json
+{
+  "mcpServers": {
+    "adb-connector": {
+      "url": "http://127.0.0.1:PORT/mcp",
+      "headers": { "Authorization": "Bearer <rotating-token>" }
+    }
+  }
+}
+```
 
-### 5. 파일 브라우저
+Reads (devices, ADB version, mDNS, recent logs, file lists) are served directly; writes (connect, pair, install APK, push/pull, port rules) run only after you approve them in the app. Tokens rotate every time the server restarts.
 
-연결된 기기의 파일 버튼으로 실행합니다.
+</details>
 
-- 폴더를 클릭해 기기 파일 시스템 탐색
-- **업로드**: Mac의 파일을 창으로 드래그&드롭
-- **다운로드**: 파일 옆 다운로드 버튼 → 저장할 폴더 선택
+## Why developers use ADB Connector
 
-### 6. 기기 관리
+Solo, ADB Connector replaces the terminal dance — `adb tcpip`, re-detecting IPs, tailing logcat — with one window that remembers your devices. On a team, it goes further: a local MCP server lets authenticated AI agents inspect devices and logs, while every mutating action waits for your explicit approval.
 
-- **수정**: 연필 아이콘으로 별명, IP, 포트, 시리얼 편집
-- **삭제**: 휴지통 아이콘으로 저장 목록에서 제거
-- **수동 추가**: 상단 `+` 버튼으로 IP를 직접 입력해 추가
+- **Wireless-first** — plug in once, then connect over WiFi with one click from anywhere on the same network.
+- **Full toolbox** — pairing (code, mDNS, QR), APK install, port forward/reverse, file browser, and logcat presets in one place.
+- **AI-ready, safely** — MCP access with per-request approval, rotating tokens, and no pairing-code logging.
 
-### 7. 빠른 연결
+> Requires macOS (Apple Silicon / Intel). Android needs **USB debugging** on; wireless use needs the device and Mac on the same WiFi.
 
-하단 "빠른 연결" 섹션에 IP와 포트(기본 5555)를 입력하고 **연결**을 누르면 저장 없이 일회성으로 연결합니다.
+## Quick Start
 
-### 8. iPhone/iPad (선택)
+Download the app, then:
+
+```bash
+# 1. Download and move to /Applications
+open https://github.com/jkaae93/adb_connector/releases/latest
+```
+
+1. Drag `ADB Connector.app` into `/Applications`.
+2. First launch: the app is unsigned, so macOS may block it. **Right-click (Control+click) → Open → Open** (once), or run `xattr -cr "/Applications/ADB Connector.app"`. On macOS Sequoia and later, if right-click Open fails, use **System Settings → Privacy & Security → "Open Anyway"**.
+3. If you see the ADB banner, click **Install** — the official Google platform-tools are downloaded automatically. An existing ADB (Android Studio, Homebrew) is detected and used as-is.
+4. Plug in your Android phone via USB, accept **Allow USB debugging**, and the app detects and saves it. Hit **Switch to wireless**, unplug, and you're cable-free.
+
+> **Want the one-liner?** `brew install libimobiledevice` adds iPhone/iPad detection and syslog support (or use the in-app Install button).
+
+## Docs
+
+Everything below lives in this README:
+
+→ **[Features](#features)**: what the app can do<br>
+→ **[Usage](#usage)**: daily workflows, step by step<br>
+→ **[AI agents (MCP)](#ai-agents-mcp-server)**: connect Claude / Codex / custom agents<br>
+→ **[Updating](#updating-adb-connector)**: Sparkle auto-updates and manual installs<br>
+→ **[Build from source](#build-from-source)**: Flutter 3.41+<br>
+→ **[Data & privacy](#data--privacy)**: where files live<br>
+→ **[Troubleshooting](#troubleshooting)**: fixes for common issues
+
+## Features
+
+**Connect**
+
+- **One-click wireless ADB** — saved devices reconnect with `adb connect`, with serial-based `tcpip` re-init + retry on failure
+- **USB → wireless switch** — one click runs `adb tcpip` and reconnects, then unplug the cable
+- **Auto-detect & save** — plug in via USB and IP, serial, and model are detected and stored
+- **Live status** — auto-refresh every 5 seconds with USB/WiFi badges
+- **Wireless debugging pairing** — pairing code + mDNS discovery, plus QR pairing on ADB builds that support it
+- **Quick connect** — one-off connection from an IP with no saving
+
+**Develop**
+
+- **Logcat viewer** — in-app live stream with buffer clear; or open in Terminal, iTerm2, Warp, Alacritty, kitty, Ghostty, Hyper (full / Flutter-only / custom filter presets)
+- **File browser** — explore the device filesystem, drag & drop uploads, downloads (`adb push`/`pull`)
+- **Dev tools** — APK/split-APK install, TCP forward/reverse rule management, transfer options
+- **iPhone/iPad support** — device detection + syslog via libimobiledevice
+- **Light & dark mode** — follows the system or set explicitly in Settings
+
+**Automate & update**
+
+- **Local MCP server** — token-authenticated device/log queries for AI agents; connect/disconnect and other writes need your per-request approval
+- **GitHub release checks** — check for releases in Settings, download the macOS ZIP, auto-install signed releases
+- **ADB auto-install** — missing ADB? Official platform-tools are downloaded and installed for you
+
+## Usage
+
+### Appearance & ADB settings
+
+Settings offers system / light / dark themes, shows the ADB binary path and version, and lets you pick a different ADB. Code pairing uses the **pairing port** and code shown on Android's Wireless debugging screen; after pairing, pick a discovered connection service or use Quick connect with the device's connection port. QR pairing needs an ADB with `pair --qr` support.
+
+### 1. First-time registration (USB)
+
+1. Connect the Android device to your Mac via USB.
+2. Approve the **Allow USB debugging** popup on the device.
+3. The app auto-detects the device info (IP, serial, model) and saves it to the list.
+
+### 2. USB → wireless switch
+
+Press **Switch to wireless** on a USB-connected device: the app runs `adb tcpip`, then reconnects wirelessly. The connection survives after unplugging the cable.
+
+### 3. Wireless connect / disconnect
+
+- **Connect** on a saved device runs `adb connect {ip}:{port}`; on failure it re-initializes via serial-based `adb tcpip` and retries automatically.
+- **Disconnect** runs `adb disconnect`.
+
+### 4. View logcat
+
+Use the log button on a device entry.
+
+- **In-app viewer** — real-time streaming + clear buffer.
+- **Open in terminal** — pick from installed apps (Terminal, iTerm2, Warp, Alacritty, kitty, Ghostty, Hyper):
+  - **Full**: unfiltered log.
+  - **Flutter**: `flutter` tags only.
+  - **Custom**: output format, tags, buffers, regex filters, max lines.
+- iOS devices show **syslog** (idevicesyslog) instead of logcat.
+
+### 5. File browser
+
+Use the file button on a connected device.
+
+- Click folders to explore the device filesystem.
+- **Upload**: drag & drop Mac files into the window.
+- **Download**: download button next to a file → choose a destination folder.
+
+### 6. Manage devices
+
+- **Edit**: pencil icon — nickname, IP, port, serial.
+- **Delete**: trash icon — remove from the saved list.
+- **Add manually**: top `+` button — enter an IP directly.
+
+### 7. Quick connect
+
+Enter IP + port (default 5555) in the bottom "Quick connect" section and press **Connect** for a one-off connection without saving.
+
+### 8. iPhone/iPad (optional)
 
 ```bash
 brew install libimobiledevice
 ```
 
-설치 후 앱을 재실행하면 USB/WiFi로 연결된 iOS 기기가 자동 감지되며, 기기 이름·모델 표시와 syslog 확인을 지원합니다.
+Or press **Install** in the app's iOS-support banner to watch the Homebrew log and result in-app; devices are re-scanned when it finishes. If Homebrew is missing or admin auth is needed, use the copy button and run the command in a terminal. Afterwards, USB/WiFi iOS devices are auto-detected with name/model display and syslog support.
 
-## 소스에서 직접 빌드
+### AI agents (MCP server)
 
-Flutter 3.41 / Dart 3.11 이상이 필요합니다.
+Turn on the local MCP server in Settings and copy the HTTP or stdio snippet into your MCP client. stdio needs Python 3 and the running app. The address and token change every time the server restarts, so re-copy the snippet. Query devices, ADB version, mDNS, recent logs, and file lists; connect/pair/reconnect, ADB-server/transfer-mode changes, APK installs, file transfers, and port-rule changes each run only after individual in-app approval. The request history in Settings lives only while the app runs, pairing codes are never recorded, and the snippet contains a secret token — don't share it.
+
+## Updating ADB Connector
+
+The app checks GitHub for new stable releases once a day. You can also check manually in Settings and download the macOS ZIP. If the release ships a signed `appcast.xml`, Sparkle downloads, verifies, replaces, and relaunches; releases without an appcast (like older ones) are updated by opening the ZIP and replacing the app yourself. Manual downloads are verified when GitHub provides a SHA-256 checksum. Apps before v1.0.1 have no updater, so the first install is always manual.
+
+<details>
+<summary><strong>Preparing a signed release (maintainer)</strong></summary>
+
+The auto-update public key is bundled in the app; the private key lives in this Mac's login keychain under the account `adb-connector-release`. Back the key up somewhere safe and register it as the repo secret `SPARKLE_PRIVATE_KEY`. Never commit the private key or paste it into logs.
+
+1. Prepare the Sparkle tools: `flutter pub get && flutter build macos --config-only`.
+2. Export the key to a safe path: `macos/Pods/Sparkle/bin/generate_keys --account adb-connector-release -x /safe/path/private-key`. Register it with `gh secret set SPARKLE_PRIVATE_KEY < /safe/path/private-key`, then securely delete any unneeded plaintext copies.
+3. Bump the version + build number in `pubspec.yaml` and run the GitHub Actions **Prepare signed macOS release** workflow on a `vX.Y.Z` tag. It verifies the private key matches the app's public key and produces the `signed-macos-release` artifact.
+4. Attach the resulting ZIP and `appcast.xml` to the same tag's official GitHub release. The workflow never publishes a release by itself.
+
+The build number must increase with every release. Lose the private key and existing installs can no longer receive signed updates — keep the backup.
+
+</details>
+
+## Build from source
+
+Flutter 3.41 / Dart 3.11 or later required.
 
 ```bash
-# 의존성 설치
+# Install dependencies
 flutter pub get
 
-# 디버그 실행
+# Debug run
 flutter run -d macos
 
-# 릴리즈 빌드
+# Release build
 flutter build macos --release
-# 결과물: build/macos/Build/Products/Release/ADB Connector.app
+# Output: build/macos/Build/Products/Release/ADB Connector.app
 ```
 
-빌드된 `.app`을 zip으로 압축하면 그대로 배포할 수 있습니다.
+Zip the `.app` to distribute it:
 
 ```bash
 cd build/macos/Build/Products/Release
 ditto -c -k --keepParent "ADB Connector.app" "ADB-Connector.zip"
 ```
 
-## 데이터 저장 위치
+## Data & privacy
 
-| 항목 | 경로 |
+| Item | Path |
 |---|---|
-| 저장된 기기 목록 | `~/Library/Application Support/adb_connector/saved_devices.json` |
-| 자동 설치된 ADB | `~/Library/Application Support/adb_connector/platform-tools/` |
-| 터미널 앱 선택 설정 | `~/Library/Application Support/adb_connector/terminal_prefs.json` |
+| Saved device list | `~/Library/Application Support/adb_connector/saved_devices.json` |
+| Auto-installed ADB | `~/Library/Application Support/adb_connector/platform-tools/` |
+| Terminal app prefs | `~/Library/Application Support/adb_connector/terminal_prefs.json` |
 
-## 문제 해결
+Everything stays on your Mac: no accounts, no telemetry. MCP request history is kept in memory only while the app runs, and pairing codes are never written to it.
 
-**앱이 "손상되었기 때문에 열 수 없습니다"라고 나올 때**
-- 서명되지 않은 앱이라 발생하는 정상적인 경고입니다. 위 [설치 방법](#설치-방법-배포된-앱-사용)의 `xattr -cr` 명령을 실행하세요.
+## Troubleshooting
 
-**무선 연결이 실패할 때**
-- 기기와 Mac이 같은 WiFi 네트워크에 있는지 확인
-- 기기의 개발자 옵션에서 **무선 디버깅**이 켜져 있는지 확인
-- USB로 다시 연결하면 앱이 IP를 재감지합니다
+**"The app is damaged and can't be opened"**
 
-**ADB가 감지되지 않을 때**
-- 상단 배너의 **설치** 버튼으로 자동 설치
-- 또는 `brew install --cask android-platform-tools`로 직접 설치
+- Expected for an unsigned app. Run the `xattr -cr` command from [Quick Start](#quick-start).
 
-**iOS 기기가 보이지 않을 때**
-- `brew install libimobiledevice` 설치 여부 확인
-- 기기에서 "이 컴퓨터를 신뢰하시겠습니까?" 팝업 승인
+**Wireless connection fails**
 
-## 기술 정보
+- Check the device and Mac are on the same WiFi network.
+- Check **Wireless debugging** is on in the device's developer options.
+- Re-plug via USB and the app re-detects the IP.
 
-- Flutter Material 3 기반 macOS 데스크톱 앱
-- ADB/libimobiledevice 호출: `dart:io` `Process`
-- 파일 드래그&드롭: `desktop_drop`, 저장 위치 선택: `file_picker`
-- ADB 실행(subprocess)을 위해 macOS 앱 샌드박스 비활성화 (`macos/Runner/*.entitlements`)
+**ADB is not detected**
 
-## 라이선스
+- Use the in-app banner's **Install** button for auto-install.
+- Or install manually: `brew install --cask android-platform-tools`.
+
+**iOS device doesn't show up**
+
+- Check `brew install libimobiledevice` completed.
+- Approve the **Trust This Computer?** popup on the device.
+
+## Tech stack
+
+- Flutter Material 3 macOS desktop app
+- ADB / libimobiledevice via `dart:io` `Process`
+- Drag & drop: `desktop_drop`, save picker: `file_picker`
+- macOS app sandbox disabled (`macos/Runner/*.entitlements`) so ADB subprocesses can run
+
+## Contributing
+
+Issues and PRs are welcome — a failing case starts with what device, macOS version, and ADB version you used.
+
+```bash
+flutter test
+```
+
+## Other
+
+<details>
+<summary><strong>Why not just use the terminal?</strong></summary>
+
+You can — every button maps to a plain `adb` command. ADB Connector just removes the repetitive parts: remembering IPs, re-running `tcpip` after reboot, tailing logcat with the right filters, and retyping `push`/`pull` paths. The terminal stays available for everything else.
+
+</details>
+
+## License
 
 Personal utility. Free to use and modify.

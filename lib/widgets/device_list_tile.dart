@@ -1,5 +1,6 @@
 import 'package:adb_connector/models/logcat_options.dart';
 import 'package:adb_connector/models/saved_device.dart';
+import 'package:adb_connector/theme/vaulta.dart';
 import 'package:flutter/material.dart';
 
 class DeviceListTile extends StatelessWidget {
@@ -43,18 +44,10 @@ class DeviceListTile extends StatelessWidget {
     return '미연결';
   }
 
-  Color _statusBgColor() {
-    if (isConnectedViaUsb && !isConnectedViaWifi) return Colors.orange.shade100;
-    if (isConnectedViaWifi) return Colors.green.shade100;
-    if (isConnectedViaUsb) return Colors.green.shade100;
-    return Colors.red.shade50;
-  }
-
-  Color _statusFgColor() {
-    if (isConnectedViaUsb && !isConnectedViaWifi) return Colors.orange.shade900;
-    if (isConnectedViaWifi) return Colors.green.shade800;
-    if (isConnectedViaUsb) return Colors.green.shade800;
-    return Colors.red.shade700;
+  Color _statusColor() {
+    if (isConnectedViaUsb && !isConnectedViaWifi) return Vaulta.warning;
+    if (isConnectedViaWifi || isConnectedViaUsb) return Vaulta.success;
+    return Vaulta.danger;
   }
 
   @override
@@ -63,7 +56,7 @@ class DeviceListTile extends StatelessWidget {
       child: ListTile(
         leading: Icon(
           _isIos ? Icons.phone_iphone : Icons.phone_android,
-          color: isConnected ? Colors.green : Colors.grey,
+          color: isConnected ? Vaulta.success : Vaulta.textMuted,
           size: 32,
         ),
         title: Row(
@@ -76,26 +69,33 @@ class DeviceListTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: _statusBgColor(),
-                borderRadius: BorderRadius.circular(4),
+                color: _statusColor().withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
                 _statusLabel,
-                style: TextStyle(fontSize: 11, color: _statusFgColor()),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: _statusColor(),
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             if (_isIos) ...[
               const SizedBox(width: 6),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(4),
+                  color: Vaulta.accent.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(999),
                 ),
-                child: Text(
+                child: const Text(
                   'iOS',
-                  style: TextStyle(fontSize: 11, color: Colors.blue.shade700),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Vaulta.accent,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -107,16 +107,17 @@ class DeviceListTile extends StatelessWidget {
                   if (device.modelName != null) device.modelName!,
                   if (device.serialName != null)
                     device.serialName!.substring(
-                      0,
-                      device.serialName!.length.clamp(0, 8),
-                    ) + '...',
+                          0,
+                          device.serialName!.length.clamp(0, 8),
+                        ) +
+                        '...',
                 ].join(' | ')
               : [
                   '${device.ip}:${device.port}',
                   if (device.modelName != null) device.modelName!,
                   if (device.serialName != null) device.serialName!,
                 ].join(' | '),
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+          style: const TextStyle(color: Vaulta.textSecondary, fontSize: 12),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -136,15 +137,9 @@ class DeviceListTile extends StatelessWidget {
                   label: const Text('WiFi로 전환'),
                 )
               else if (isConnectedViaWifi)
-                TextButton(
-                  onPressed: onDisconnect,
-                  child: const Text('연결 해제'),
-                )
+                TextButton(onPressed: onDisconnect, child: const Text('연결 해제'))
               else
-                FilledButton(
-                  onPressed: onConnect,
-                  child: const Text('연결'),
-                ),
+                FilledButton(onPressed: onConnect, child: const Text('연결')),
               const SizedBox(width: 4),
             ],
 
@@ -170,10 +165,9 @@ class DeviceListTile extends StatelessWidget {
               icon: Icon(
                 Icons.terminal,
                 size: 20,
-                color: isConnected ? null : Colors.grey.shade400,
+                color: isConnected ? null : Vaulta.textMuted,
               ),
-              tooltip:
-                  isConnected ? '터미널에서 열기' : '연결 후 사용 가능',
+              tooltip: isConnected ? '터미널에서 열기' : '연결 후 사용 가능',
               enabled: isConnected,
               itemBuilder: (_) => [
                 const PopupMenuItem(

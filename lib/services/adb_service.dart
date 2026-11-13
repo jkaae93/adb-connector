@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:adb_connector/models/remote_file_entry.dart';
 import 'package:adb_connector/models/saved_device.dart';
@@ -32,6 +33,71 @@ class AdbService {
       'https://dl.google.com/android/repository/platform-tools-latest-darwin.zip';
 
   String get adbPath => _adbPath;
+
+  Future<void> loadConfiguredPath() async {
+    try {
+      final file = File(
+        '${Platform.environment['HOME']}/Library/Application Support/adb_connector/adb_path.json',
+      );
+      final path =
+          (jsonDecode(await file.readAsString())
+                  as Map<String, dynamic>)['path']
+              as String;
+      if (await File(path).exists()) _adbPath = path;
+    } catch (_) {}
+  }
+
+  Future<bool> setAdbPath(String path) async {
+    try {
+      final result = await Process.run(path, ['version']).timeout(timeout);
+      if (result.exitCode != 0 ||
+          !result.stdout.toString().contains('Android Debug Bridge'))
+        return false;
+      final file = File(
+        '${Platform.environment['HOME']}/Library/Application Support/adb_connector/adb_path.json',
+      );
+      await file.parent.create(recursive: true);
+      await file.writeAsString(jsonEncode({'path': path}));
+      _adbPath = path;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<ProcessResult> command(
+    List<String> args, {
+    Duration? limit,
+    void Function(Process)? onStart,
+  }) async {
+    if (!isAdbAvailable()) return ProcessResult(0, 1, '', 'ADB not installed');
+    Process? process;
+    try {
+      process = await Process.start(_adbPath, args);
+      onStart?.call(process);
+      final stdout = process.stdout.transform(utf8.decoder).join();
+      final stderr = process.stderr.transform(utf8.decoder).join();
+      final exitCode = await process.exitCode.timeout(limit ?? timeout);
+      return ProcessResult(process.pid, exitCode, await stdout, await stderr);
+    } on TimeoutException {
+      process?.kill();
+      return ProcessResult(process?.pid ?? 0, 1, '', 'Command timed out');
+    } catch (e) {
+      process?.kill();
+      return ProcessResult(0, 1, '', e.toString());
+    }
+  }
+
+  Future<ConnectResult> pair(String host, int port, String code) async {
+    final result = await command(['pair', endpoint(host, port), code]);
+    final message = '${result.stdout}${result.stderr}'.trim();
+    return result.exitCode == 0 && message.contains('Successfully paired')
+        ? ConnectResult.ok(message)
+        : ConnectResult.failure(message);
+  }
+
+  static String endpoint(String host, int port) =>
+      '${host.contains(':') && !host.startsWith('[') ? '[$host]' : host}:$port';
 
   static String get _installDir {
     final home = Platform.environment['HOME'] ?? '';
@@ -78,8 +144,10 @@ class AdbService {
       if (!await parentDir.exists()) {
         await parentDir.create(recursive: true);
       }
-
-      final zipPath = '${parentDir.path}/platform-tools.zip';
+      final staging = await Directory.systemTemp.createTemp(
+        'adb-connector-install-',
+      );
+      final zipPath = '${staging.path}/platform-tools.zip';
       final zipFile = File(zipPath);
 
       onProgress?.call('ADB 다운로드 중...', 0);
@@ -87,6 +155,9 @@ class AdbService {
       try {
         final request = await client.getUrl(Uri.parse(downloadUrl));
         final response = await request.close();
+        if (response.statusCode != HttpStatus.ok) {
+          throw HttpException('HTTP ${response.statusCode}');
+        }
         final totalBytes = response.contentLength;
         var downloadedBytes = 0;
 
@@ -108,32 +179,48 @@ class AdbService {
 
       onProgress?.call('압축 해제 중...', null);
 
-      // 기존 설치 폴더 제거
       final installDir = Directory(_installDir);
-      if (await installDir.exists()) {
-        await installDir.delete(recursive: true);
-      }
-
-      // unzip으로 압축 해제
-      final unzipResult = await Process.run(
-        'unzip',
-        ['-q', zipPath, '-d', parentDir.path],
-      );
+      final unzipResult = await Process.run('unzip', [
+        '-q',
+        zipPath,
+        '-d',
+        staging.path,
+      ]);
       if (unzipResult.exitCode != 0) {
-        onProgress?.call(
-          '압축 해제 실패: ${unzipResult.stderr}',
-          null,
-        );
+        onProgress?.call('압축 해제 실패: ${unzipResult.stderr}', null);
         return false;
       }
 
-      // 권한 설정
-      await Process.run('chmod', ['+x', _installedAdbPath]);
-
-      // zip 파일 삭제
-      if (await zipFile.exists()) {
-        await zipFile.delete();
+      final candidate = '${staging.path}/platform-tools/adb';
+      final validation = await Process.run(candidate, [
+        'version',
+      ]).timeout(timeout);
+      if (validation.exitCode != 0 ||
+          !validation.stdout.toString().contains('Android Debug Bridge')) {
+        throw const FormatException('다운로드된 ADB를 검증할 수 없습니다');
       }
+      final incoming = Directory(
+        '${parentDir.path}/platform-tools-incoming-${DateTime.now().microsecondsSinceEpoch}',
+      );
+      final copied = await Process.run('ditto', [
+        '${staging.path}/platform-tools',
+        incoming.path,
+      ]);
+      if (copied.exitCode != 0)
+        throw FileSystemException('설치 파일 복사 실패', incoming.path);
+      final backup = Directory(
+        '${parentDir.path}/platform-tools-backup-${DateTime.now().microsecondsSinceEpoch}',
+      );
+      final hadOld = await installDir.exists();
+      if (hadOld) await installDir.rename(backup.path);
+      try {
+        await incoming.rename(installDir.path);
+      } catch (_) {
+        if (hadOld) await backup.rename(installDir.path);
+        rethrow;
+      }
+      if (hadOld) await backup.delete(recursive: true);
+      await staging.delete(recursive: true);
 
       onProgress?.call('설치 완료', 1.0);
 
@@ -176,9 +263,13 @@ class AdbService {
     // 모델명 조회
     for (final device in devices) {
       try {
+        if (device.state != 'device') continue;
         final model = await getDeviceModel(device.identifier);
         if (model.isNotEmpty) {
           device.modelName = model;
+        }
+        if (device.isMdnsConnection) {
+          device.hardwareSerial = await getDeviceSerial(device.identifier);
         }
       } catch (_) {
         // 모델명 조회 실패 무시
@@ -189,16 +280,22 @@ class AdbService {
   }
 
   Future<ConnectResult> connect(String ip, int port) async {
-    final target = '$ip:$port';
+    final target = endpoint(ip, port);
     final result = await _run(['connect', target]);
     final output = (result.stdout as String).trim();
 
-    if (output.contains('connected to') ||
-        output.contains('already connected')) {
+    if (result.exitCode == 0 &&
+        (output.startsWith('connected to') ||
+            output.startsWith('already connected'))) {
       return ConnectResult.ok('연결 성공: $target');
     }
 
-    return ConnectResult.failure(output);
+    return ConnectResult.failure(
+      [
+        output,
+        result.stderr.toString().trim(),
+      ].where((s) => s.isNotEmpty).join('\n'),
+    );
   }
 
   Future<bool> enableTcpip(String serial, int port) async {
@@ -246,7 +343,7 @@ class AdbService {
   }
 
   Future<ConnectResult> disconnect(String ip, int port) async {
-    final target = '$ip:$port';
+    final target = endpoint(ip, port);
     final result = await _run(['disconnect', target]);
     final output = (result.stdout as String).trim();
 
@@ -287,9 +384,7 @@ class AdbService {
     if (result.success) {
       return ConnectResult.ok('WiFi 연결 성공: $targetIp:$port');
     }
-    return ConnectResult.failure(
-      'WiFi 연결 실패 - 기기가 같은 WiFi에 있는지 확인해주세요',
-    );
+    return ConnectResult.failure('WiFi 연결 실패 - 기기가 같은 WiFi에 있는지 확인해주세요');
   }
 
   /// logcat을 실시간으로 스트리밍. [identifier]는 시리얼 또는 "ip:port".
@@ -316,8 +411,11 @@ class AdbService {
     bool flutterOnly = false,
   }) async {
     final logcatArgs = [
-      '-s', identifier,
-      'logcat', '-v', 'color',
+      '-s',
+      identifier,
+      'logcat',
+      '-v',
+      'color',
       if (flutterOnly) ...const ['-s', 'flutter'],
     ];
     final command = '$_adbPath ${logcatArgs.join(' ')}';
@@ -353,12 +451,16 @@ class AdbService {
   Future<bool> pullFile(
     String identifier,
     String remotePath,
-    String localPath,
-  ) async {
+    String localPath, {
+    bool preserve = false,
+    String? compression,
+  }) async {
     final result = await _runNoTimeout([
       '-s',
       identifier,
       'pull',
+      if (preserve) '-a',
+      if (compression != null) ...['-z', compression],
       remotePath,
       localPath,
     ]);
@@ -368,12 +470,16 @@ class AdbService {
   Future<bool> pushFile(
     String identifier,
     String localPath,
-    String remotePath,
-  ) async {
+    String remotePath, {
+    bool sync = false,
+    String? compression,
+  }) async {
     final result = await _runNoTimeout([
       '-s',
       identifier,
       'push',
+      if (sync) '--sync',
+      if (compression != null) ...['-z', compression],
       localPath,
       remotePath,
     ]);

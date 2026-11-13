@@ -2,31 +2,37 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:adb_connector/theme/vaulta.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+enum LogcatFilterPreset { all, flutter, appPid, errors, crash }
 
 class LogLine {
   LogLine({
     required this.raw,
     required this.priority,
     required this.tag,
+    this.pid,
   });
 
   final String raw;
   final String priority; // V, D, I, W, E, F
   final String tag;
+  final String? pid;
 
   static LogLine parse(String raw) {
     // threadtime format:
     // 05-08 11:28:00.000  1234  5678 I TAG     : message
     final regex = RegExp(
-      r'^\d+-\d+\s+\d+:\d+:\d+\.\d+\s+\d+\s+\d+\s+([VDIWEF])\s+([^:]+):',
+      r'^\d+-\d+\s+\d+:\d+:\d+\.\d+\s+(\d+)\s+\d+\s+([VDIWEF])\s+([^:]+):',
     );
     final match = regex.firstMatch(raw);
     return LogLine(
       raw: raw,
-      priority: match?.group(1) ?? '',
-      tag: match?.group(2)?.trim() ?? '',
+      pid: match?.group(1),
+      priority: match?.group(2) ?? '',
+      tag: match?.group(3)?.trim() ?? '',
     );
   }
 }
@@ -36,12 +42,16 @@ class LogcatPage extends StatefulWidget {
     super.key,
     required this.deviceName,
     required this.processFactory,
+    required this.resolvePackagePid,
     this.onClearBuffer,
+    this.standaloneWindow = false,
   });
 
   final String deviceName;
   final Future<Process> Function() processFactory;
+  final Future<String?> Function(String packageName) resolvePackagePid;
   final Future<void> Function()? onClearBuffer;
+  final bool standaloneWindow;
 
   @override
   State<LogcatPage> createState() => _LogcatPageState();
@@ -55,23 +65,38 @@ class _LogcatPageState extends State<LogcatPage> {
   static const int _maxLogs = 5000;
 
   Process? _process;
+  bool _closing = false;
+  static const _windowChannel = MethodChannel('adb_connector/log_window');
   StreamSubscription<String>? _stdoutSub;
   StreamSubscription<String>? _stderrSub;
 
   bool _isPaused = false;
   bool _autoScroll = true;
   String _filterText = '';
+  LogcatFilterPreset _preset = LogcatFilterPreset.all;
+  String? _packageName;
+  String? _appPid;
   final Set<String> _priorityFilter = {'V', 'D', 'I', 'W', 'E', 'F'};
 
   @override
   void initState() {
     super.initState();
+    if (widget.standaloneWindow) {
+      _windowChannel.setMethodCallHandler((call) async {
+        if (call.method == 'windowClosing') {
+          _closing = true;
+          _stopLogcat();
+        }
+      });
+    }
     _scrollController.addListener(_onScroll);
     _startLogcat();
   }
 
   @override
   void dispose() {
+    if (widget.standaloneWindow) _windowChannel.setMethodCallHandler(null);
+    _closing = true;
     _stopLogcat();
     _scrollController.dispose();
     _filterController.dispose();
@@ -80,7 +105,8 @@ class _LogcatPageState extends State<LogcatPage> {
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
-    final atBottom = _scrollController.position.pixels >=
+    final atBottom =
+        _scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 50;
     if (_autoScroll != atBottom) {
       setState(() => _autoScroll = atBottom);
@@ -89,7 +115,12 @@ class _LogcatPageState extends State<LogcatPage> {
 
   Future<void> _startLogcat() async {
     try {
-      _process = await widget.processFactory();
+      final process = await widget.processFactory();
+      if (!mounted || _closing) {
+        process.kill();
+        return;
+      }
+      _process = process;
       _stdoutSub = _process!.stdout
           .transform(utf8.decoder)
           .transform(const LineSplitter())
@@ -103,7 +134,7 @@ class _LogcatPageState extends State<LogcatPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('로그 실행 실패: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Vaulta.danger,
           ),
         );
       }
@@ -118,6 +149,7 @@ class _LogcatPageState extends State<LogcatPage> {
   }
 
   void _onLogLine(String line) {
+    if (!mounted) return;
     if (_isPaused) return;
     if (line.isEmpty) return;
 
@@ -132,9 +164,7 @@ class _LogcatPageState extends State<LogcatPage> {
     if (_autoScroll) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scrollController.hasClients) {
-          _scrollController.jumpTo(
-            _scrollController.position.maxScrollExtent,
-          );
+          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
         }
       });
     }
@@ -149,21 +179,27 @@ class _LogcatPageState extends State<LogcatPage> {
   }
 
   Future<void> _clearDeviceBuffer() async {
-    await widget.onClearBuffer?.call();
-    setState(() => _logs.clear());
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('기기 로그 버퍼를 비웠습니다')),
-      );
+    try {
+      await widget.onClearBuffer?.call();
+      if (!mounted) return;
+      setState(() => _logs.clear());
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('기기 로그 버퍼를 비웠습니다')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('기기 로그 버퍼를 비우지 못했습니다: $error')));
     }
   }
 
   void _copyAll() {
     final text = _filteredLogs.map((l) => l.raw).join('\n');
     Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${_filteredLogs.length}줄 복사됨')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('${_filteredLogs.length}줄 복사됨')));
   }
 
   void _togglePriority(String p) {
@@ -176,10 +212,80 @@ class _LogcatPageState extends State<LogcatPage> {
     });
   }
 
+  Future<void> _selectPreset(LogcatFilterPreset preset) async {
+    String? packageName;
+    if (preset == LogcatFilterPreset.appPid) {
+      final controller = TextEditingController(text: _packageName);
+      packageName = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('앱 PID 필터'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: '패키지명',
+              hintText: 'com.example.myapp',
+            ),
+            onSubmitted: (value) => Navigator.pop(context, value.trim()),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, controller.text.trim()),
+              child: const Text('적용'),
+            ),
+          ],
+        ),
+      );
+      if (packageName == null || packageName.isEmpty) return;
+      try {
+        final pid = await widget.resolvePackagePid(packageName);
+        if (pid == null || pid.isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('실행 중인 앱 PID를 찾을 수 없습니다: $packageName')),
+            );
+          }
+          return;
+        }
+        _appPid = pid;
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('앱 PID 조회 실패: $error')));
+        }
+        return;
+      }
+    }
+    setState(() {
+      _preset = preset;
+      if (preset == LogcatFilterPreset.appPid) _packageName = packageName;
+    });
+  }
+
   List<LogLine> get _filteredLogs {
     return _logs.where((log) {
-      if (log.priority.isNotEmpty &&
-          !_priorityFilter.contains(log.priority)) {
+      switch (_preset) {
+        case LogcatFilterPreset.flutter:
+          if (log.tag.toLowerCase() != 'flutter') return false;
+        case LogcatFilterPreset.appPid:
+          if (log.pid != _appPid) return false;
+        case LogcatFilterPreset.errors:
+          if (log.priority != 'E' && log.priority != 'F') return false;
+        case LogcatFilterPreset.crash:
+          if (log.priority != 'F' &&
+              !log.tag.toLowerCase().contains('crash') &&
+              log.tag != 'AndroidRuntime')
+            return false;
+        case LogcatFilterPreset.all:
+          break;
+      }
+      if (log.priority.isNotEmpty && !_priorityFilter.contains(log.priority)) {
         return false;
       }
       if (_filterText.isNotEmpty &&
@@ -191,21 +297,21 @@ class _LogcatPageState extends State<LogcatPage> {
   }
 
   Color _colorForPriority(String p) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     switch (p) {
       case 'V':
-        return Colors.grey.shade600;
+        return dark ? Vaulta.textSecondary : Vaulta.lightTextSecondary;
       case 'D':
-        return Colors.blue.shade700;
+        return dark ? Vaulta.accentBright : Vaulta.actionCircle;
       case 'I':
-        return Colors.green.shade700;
+        return Vaulta.success;
       case 'W':
-        return Colors.orange.shade800;
+        return Vaulta.warning;
       case 'E':
-        return Colors.red.shade700;
       case 'F':
-        return Colors.purple.shade900;
+        return Vaulta.danger;
       default:
-        return Colors.black87;
+        return Theme.of(context).colorScheme.onSurface;
     }
   }
 
@@ -244,38 +350,75 @@ class _LogcatPageState extends State<LogcatPage> {
       body: Column(
         children: [
           _buildFilterBar(),
-          const Divider(height: 1),
           Expanded(
-            child: filtered.isEmpty
-                ? const Center(
-                    child: Text(
-                      '로그가 없습니다',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  )
-                : Scrollbar(
-                    controller: _scrollController,
-                    child: ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      itemCount: filtered.length,
-                      itemBuilder: (context, index) {
-                        final log = filtered[index];
-                        return SelectableText(
-                          log.raw,
-                          style: TextStyle(
-                            fontFamily: 'Menlo',
-                            fontSize: 12,
-                            color: _colorForPriority(log.priority),
-                            height: 1.3,
+            child: Container(
+              margin: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Vaulta.surface
+                    : Vaulta.lightSurface,
+                borderRadius: BorderRadius.circular(Vaulta.radiusCard),
+                border: Border.all(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Vaulta.stroke
+                      : Vaulta.lightStroke,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(Vaulta.radiusCard),
+                child: filtered.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.article_outlined,
+                              size: 40,
+                              color:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? Vaulta.textMuted
+                                  : Vaulta.lightTextSecondary,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              '로그가 없습니다',
+                              style: TextStyle(
+                                color:
+                                    Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Vaulta.textMuted
+                                    : Vaulta.lightTextSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Scrollbar(
+                        controller: _scrollController,
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
                           ),
-                        );
-                      },
-                    ),
-                  ),
+                          itemCount: filtered.length,
+                          itemBuilder: (context, index) {
+                            final log = filtered[index];
+                            return SelectableText(
+                              log.raw,
+                              style: TextStyle(
+                                fontFamily: 'Menlo',
+                                fontSize: 12,
+                                color: _colorForPriority(log.priority),
+                                height: 1.4,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+              ),
+            ),
           ),
           _buildStatusBar(filtered.length),
         ],
@@ -284,54 +427,109 @@ class _LogcatPageState extends State<LogcatPage> {
   }
 
   Widget _buildFilterBar() {
-    return Padding(
-      padding: const EdgeInsets.all(8),
-      child: Row(
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: dark ? Vaulta.surface : Vaulta.lightSurface,
+        border: Border(
+          bottom: BorderSide(color: dark ? Vaulta.stroke : Vaulta.lightStroke),
+        ),
+      ),
+      child: Column(
         children: [
-          Expanded(
-            child: TextField(
-              controller: _filterController,
-              decoration: InputDecoration(
-                hintText: '검색 필터 (태그, 메시지 등)',
-                prefixIcon: const Icon(Icons.search, size: 20),
-                border: const OutlineInputBorder(),
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _filterController,
+                  decoration: InputDecoration(
+                    hintText: '검색 필터 (태그, 메시지 등)',
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    isDense: true,
+                    suffixIcon: _filterText.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () {
+                              _filterController.clear();
+                              setState(() => _filterText = '');
+                            },
+                          ),
+                  ),
+                  onChanged: (v) => setState(() => _filterText = v),
                 ),
-                suffixIcon: _filterText.isEmpty
-                    ? null
-                    : IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () {
-                          _filterController.clear();
-                          setState(() => _filterText = '');
-                        },
-                      ),
               ),
-              onChanged: (v) => setState(() => _filterText = v),
-            ),
+              const SizedBox(width: 12),
+              PopupMenuButton<LogcatFilterPreset>(
+                tooltip: '추천 필터',
+                initialValue: _preset,
+                onSelected: _selectPreset,
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: LogcatFilterPreset.all,
+                    child: Text('전체 로그'),
+                  ),
+                  PopupMenuItem(
+                    value: LogcatFilterPreset.flutter,
+                    child: Text('Flutter 로그'),
+                  ),
+                  PopupMenuItem(
+                    value: LogcatFilterPreset.appPid,
+                    child: Text('앱 PID (패키지명)'),
+                  ),
+                  PopupMenuItem(
+                    value: LogcatFilterPreset.errors,
+                    child: Text('오류 이상 (*:E)'),
+                  ),
+                  PopupMenuItem(
+                    value: LogcatFilterPreset.crash,
+                    child: Text('크래시/치명 로그'),
+                  ),
+                ],
+                child: Chip(
+                  avatar: const Icon(Icons.filter_list, size: 18),
+                  label: Text(
+                    _preset == LogcatFilterPreset.appPid
+                        ? (_packageName ?? '앱 PID')
+                        : switch (_preset) {
+                            LogcatFilterPreset.all => '전체 로그',
+                            LogcatFilterPreset.flutter => 'Flutter 로그',
+                            LogcatFilterPreset.appPid => '앱 PID',
+                            LogcatFilterPreset.errors => '오류 이상',
+                            LogcatFilterPreset.crash => '크래시/치명 로그',
+                          },
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          ...['V', 'D', 'I', 'W', 'E', 'F'].map(
-            (p) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: FilterChip(
-                label: Text(p),
-                labelStyle: TextStyle(
-                  color: _priorityFilter.contains(p)
-                      ? _colorForPriority(p)
-                      : Colors.grey,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-                selected: _priorityFilter.contains(p),
-                onSelected: (_) => _togglePriority(p),
-                showCheckmark: false,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                visualDensity: VisualDensity.compact,
-              ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: ['V', 'D', 'I', 'W', 'E', 'F']
+                  .map(
+                    (p) => Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: FilterChip(
+                        label: Text(p),
+                        labelStyle: TextStyle(
+                          color: _priorityFilter.contains(p)
+                              ? _colorForPriority(p)
+                              : Vaulta.textMuted,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                        selected: _priorityFilter.contains(p),
+                        onSelected: (_) => _togglePriority(p),
+                        showCheckmark: false,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  )
+                  .toList(),
             ),
           ),
         ],
@@ -340,63 +538,24 @@ class _LogcatPageState extends State<LogcatPage> {
   }
 
   Widget _buildStatusBar(int filteredCount) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      color: Colors.grey.shade100,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: dark ? Vaulta.surface : Vaulta.lightSurface,
+        border: Border(
+          top: BorderSide(color: dark ? Vaulta.stroke : Vaulta.lightStroke),
+        ),
+      ),
       child: Row(
         children: [
-          if (_isPaused)
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade100,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                '일시정지',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.orange.shade900,
-                ),
-              ),
-            )
-          else
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.green.shade100,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: Colors.green,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '실시간',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.green.shade900,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          if (_isPaused) VaultaStatusPill.paused() else VaultaStatusPill.live(),
           const SizedBox(width: 12),
           Text(
             '$filteredCount / ${_logs.length}',
             style: TextStyle(
               fontSize: 11,
-              color: Colors.grey.shade700,
+              color: dark ? Vaulta.textMuted : Vaulta.lightTextSecondary,
             ),
           ),
           const Spacer(),

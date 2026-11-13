@@ -112,16 +112,19 @@ class TerminalService {
         _warpCopied = true;
       case 'alacritty':
         final appPath = _findAppPath(app)!;
-        await Process.run(
-          '$appPath/Contents/MacOS/alacritty',
-          ['-e', 'bash', '-c', '$command; exec bash'],
-        );
+        await Process.run('$appPath/Contents/MacOS/alacritty', [
+          '-e',
+          'bash',
+          '-c',
+          '$command; exec bash',
+        ]);
       case 'kitty':
         final appPath = _findAppPath(app)!;
-        await Process.run(
-          '$appPath/Contents/MacOS/kitty',
-          ['bash', '-c', '$command; exec bash'],
-        );
+        await Process.run('$appPath/Contents/MacOS/kitty', [
+          'bash',
+          '-c',
+          '$command; exec bash',
+        ]);
       case 'ghostty':
         await Process.run('open', ['-a', 'Ghostty', '--args', command]);
       default:

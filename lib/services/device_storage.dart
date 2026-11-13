@@ -41,7 +41,9 @@ class DeviceStorage {
     final devices = await loadDevices();
     final duplicate = devices.any((d) {
       if (device.isIos) return d.serialName == device.serialName;
-      return d.ip == device.ip;
+      return d.platform == DevicePlatform.android &&
+          d.ip == device.ip &&
+          d.port == device.port;
     });
     if (duplicate) return;
     devices.add(device);

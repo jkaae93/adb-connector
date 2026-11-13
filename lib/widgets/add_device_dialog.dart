@@ -22,16 +22,19 @@ class _AddDeviceDialogState extends State<AddDeviceDialog> {
   @override
   void initState() {
     super.initState();
-    _nicknameController =
-        TextEditingController(text: widget.device?.nickname ?? '');
+    _nicknameController = TextEditingController(
+      text: widget.device?.nickname ?? '',
+    );
     _ipController = TextEditingController(text: widget.device?.ip ?? '');
     _portController = TextEditingController(
       text: (widget.device?.port ?? 5555).toString(),
     );
-    _serialController =
-        TextEditingController(text: widget.device?.serialName ?? '');
-    _modelController =
-        TextEditingController(text: widget.device?.modelName ?? '');
+    _serialController = TextEditingController(
+      text: widget.device?.serialName ?? '',
+    );
+    _modelController = TextEditingController(
+      text: widget.device?.modelName ?? '',
+    );
   }
 
   @override
@@ -58,7 +61,6 @@ class _AddDeviceDialogState extends State<AddDeviceDialog> {
               decoration: const InputDecoration(
                 labelText: '별명',
                 hintText: '예: 테스트폰',
-                border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
@@ -67,7 +69,6 @@ class _AddDeviceDialogState extends State<AddDeviceDialog> {
               decoration: const InputDecoration(
                 labelText: 'IP 주소',
                 hintText: '예: 192.168.0.100',
-                border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
@@ -76,7 +77,6 @@ class _AddDeviceDialogState extends State<AddDeviceDialog> {
               decoration: const InputDecoration(
                 labelText: '포트',
                 hintText: '5555',
-                border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.number,
             ),
@@ -86,7 +86,6 @@ class _AddDeviceDialogState extends State<AddDeviceDialog> {
               decoration: const InputDecoration(
                 labelText: '시리얼 (선택)',
                 hintText: '예: R5CX12M8YWZ',
-                border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
@@ -95,7 +94,6 @@ class _AddDeviceDialogState extends State<AddDeviceDialog> {
               decoration: const InputDecoration(
                 labelText: '모델명 (선택)',
                 hintText: '예: SM-A256N',
-                border: OutlineInputBorder(),
               ),
             ),
           ],
@@ -106,10 +104,7 @@ class _AddDeviceDialogState extends State<AddDeviceDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('취소'),
         ),
-        FilledButton(
-          onPressed: _onSave,
-          child: const Text('저장'),
-        ),
+        FilledButton(onPressed: _onSave, child: const Text('저장')),
       ],
     );
   }
@@ -122,15 +117,14 @@ class _AddDeviceDialogState extends State<AddDeviceDialog> {
     final model = _modelController.text.trim();
 
     if (nickname.isEmpty || ip.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('별명과 IP 주소는 필수입니다')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('별명과 IP 주소는 필수입니다')));
       return;
     }
 
     final device = SavedDevice(
-      id: widget.device?.id ??
-          DateTime.now().millisecondsSinceEpoch.toString(),
+      id: widget.device?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
       nickname: nickname,
       ip: ip,
       port: port,

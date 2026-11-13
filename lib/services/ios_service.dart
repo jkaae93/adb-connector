@@ -22,11 +22,12 @@ class IosService {
 
   static const _timeout = Duration(seconds: 5);
 
-  static const List<String> _toolPaths = [
+  List<String> get _toolPaths => {
     '/opt/homebrew/bin',
     '/usr/local/bin',
+    ...?Platform.environment['PATH']?.split(':'),
     '/usr/bin',
-  ];
+  }.where((path) => path.isNotEmpty).toList();
 
   String? _resolveToolPath(String tool) {
     for (final dir in _toolPaths) {
@@ -38,8 +39,36 @@ class IosService {
 
   String? get _ideviceIdPath => _resolveToolPath('idevice_id');
   String? get _ideviceSyslogPath => _resolveToolPath('idevicesyslog');
+  String? get homebrewPath => _resolveToolPath('brew');
 
-  bool isAvailable() => _ideviceIdPath != null;
+  bool isAvailable() =>
+      _ideviceIdPath != null &&
+      _resolveToolPath('ideviceinfo') != null &&
+      _ideviceSyslogPath != null;
+
+  Future<Process> installWithHomebrew() async {
+    final brew = homebrewPath;
+    if (brew == null) {
+      throw const FileSystemException(
+        'Homebrew를 찾을 수 없습니다. Homebrew를 설치하거나 터미널에서 설치 명령을 실행해 주세요.',
+      );
+    }
+    final brewDir = File(brew).parent.path;
+    final existingPath = Platform.environment['PATH'] ?? '';
+    return Process.start(
+      brew,
+      ['install', 'libimobiledevice'],
+      environment: {
+        'PATH':
+            '$brewDir:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$existingPath',
+        'NONINTERACTIVE': '1',
+        'HOMEBREW_NO_AUTO_UPDATE': '1',
+        'HOMEBREW_NO_INSTALL_CLEANUP': '1',
+        'HOMEBREW_NO_COLOR': '1',
+        'TERM': 'dumb',
+      },
+    );
+  }
 
   Future<ProcessResult> _run(String tool, List<String> args) async {
     final path = _resolveToolPath(tool);

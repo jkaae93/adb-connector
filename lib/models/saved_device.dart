@@ -76,18 +76,23 @@ class ConnectedDevice {
   final String identifier;
   final String state;
   String? modelName;
+  String? hardwareSerial;
 
-  bool get isIpConnection => identifier.contains(':');
+  bool get isIpConnection => port != null;
+  bool get isMdnsConnection => identifier.contains('_adb-tls-connect._tcp');
+  bool get isNetworkConnection => isIpConnection || isMdnsConnection;
 
   String? get ip {
     if (!isIpConnection) return null;
-    return identifier.split(':').first;
+    final host = identifier.substring(0, identifier.lastIndexOf(':'));
+    return host.startsWith('[') && host.endsWith(']')
+        ? host.substring(1, host.length - 1)
+        : host;
   }
 
   int? get port {
-    if (!isIpConnection) return null;
-    final parts = identifier.split(':');
-    if (parts.length < 2) return null;
-    return int.tryParse(parts[1]);
+    final index = identifier.lastIndexOf(':');
+    if (index < 1) return null;
+    return int.tryParse(identifier.substring(index + 1));
   }
 }

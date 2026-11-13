@@ -23,13 +23,11 @@ class LogcatOptions {
   final int? maxLines;
 
   List<String> toArgs() => [
-        '-v', format,
-        ...tags.expand((t) => ['-s', t]),
-        ...buffers.expand((b) => ['-b', b]),
-        if (regexFilter != null && regexFilter!.isNotEmpty) ...[
-          '-e',
-          regexFilter!,
-        ],
-        if (maxLines != null) ...['-m', '$maxLines'],
-      ];
+    '-v',
+    format,
+    ...tags.expand((t) => ['-s', t]),
+    ...buffers.expand((b) => ['-b', b]),
+    if (regexFilter != null && regexFilter!.isNotEmpty) ...['-e', regexFilter!],
+    if (maxLines != null) ...['-m', '$maxLines'],
+  ];
 }

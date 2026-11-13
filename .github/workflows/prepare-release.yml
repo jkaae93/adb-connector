@@ -1,0 +1,53 @@
+name: Prepare signed macOS release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag matching pubspec.yaml (for example v1.2.3)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Check release inputs
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          python3 -c 'import os,re,sys; p=open("pubspec.yaml").read(); m=re.search(r"(?m)^version:\s*(\d+\.\d+\.\d+)\+(\d+)\s*$",p); tag=os.environ["RELEASE_TAG"]; sys.exit(0 if m and tag == "v"+m.group(1) and os.environ.get("SPARKLE_PRIVATE_KEY") else "Release tag must match pubspec.yaml and SPARKLE_PRIVATE_KEY must be set")'
+          export SPARKLE_EXPECTED_PUBLIC_KEY="$(/usr/libexec/PlistBuddy -c 'Print SUPublicEDKey' macos/Runner/Info.plist)"
+          swift -e 'import Foundation; import CryptoKit; guard let s = ProcessInfo.processInfo.environment["SPARKLE_PRIVATE_KEY"], let d = Data(base64Encoded: s.trimmingCharacters(in: .whitespacesAndNewlines)), let k = try? Curve25519.Signing.PrivateKey(rawRepresentation: d), k.publicKey.rawRepresentation.base64EncodedString() == ProcessInfo.processInfo.environment["SPARKLE_EXPECTED_PUBLIC_KEY"] else { fatalError("SPARKLE_PRIVATE_KEY does not match the app public key") }'
+      - run: flutter pub get
+      - run: flutter analyze --no-pub
+      - run: flutter test --no-pub
+      - run: python3 -m unittest discover -s test -p '*_test.py'
+      - run: flutter build macos --config-only
+      - name: Build macOS app
+        run: xcodebuild -quiet -workspace macos/Runner.xcworkspace -scheme Runner -configuration Release -derivedDataPath "$RUNNER_TEMP/adb-connector-build" CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= build
+      - name: Package and sign
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/adb-connector-release"
+          archive="$RUNNER_TEMP/adb-connector-release/ADB-Connector-${RELEASE_TAG}-macos.zip"
+          app="$RUNNER_TEMP/adb-connector-build/Build/Products/Release/ADB Connector.app"
+          ditto -c -k --sequesterRsrc --keepParent "$app" "$archive"
+          signature="$(printf '%s' "$SPARKLE_PRIVATE_KEY" | macos/Pods/Sparkle/bin/sign_update --ed-key-file - -p "$archive")"
+          build="$(/usr/libexec/PlistBuddy -c 'Print CFBundleVersion' "$app/Contents/Info.plist")"
+          python3 scripts/create_appcast.py --tag "$RELEASE_TAG" --build "$build" --archive "$archive" --signature "$signature" --output "$RUNNER_TEMP/adb-connector-release/appcast.xml"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signed-macos-release
+          path: ${{ runner.temp }}/adb-connector-release/
+          if-no-files-found: error
