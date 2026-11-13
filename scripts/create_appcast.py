@@ -42,9 +42,9 @@ def main():
     ET.SubElement(item, 'title').text = f'ADB Connector {args.tag}'
     ET.SubElement(item, f'{{{SPARKLE}}}version').text = args.build
     ET.SubElement(item, f'{{{SPARKLE}}}shortVersionString').text = args.tag[1:]
-    ET.SubElement(item, 'link').text = f'https://github.com/jkaae93/adb_connector/releases/tag/{quote(args.tag)}'
+    ET.SubElement(item, 'link').text = f'https://github.com/jkaae93/adb-connector/releases/tag/{quote(args.tag)}'
     ET.SubElement(item, 'enclosure', {
-        'url': f'https://github.com/jkaae93/adb_connector/releases/download/{quote(args.tag)}/{quote(args.archive.name)}',
+        'url': f'https://github.com/jkaae93/adb-connector/releases/download/{quote(args.tag)}/{quote(args.archive.name)}',
         f'{{{SPARKLE}}}edSignature': args.signature,
         'length': str(args.archive.stat().st_size),
         'type': 'application/octet-stream',

@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/jkaae93/adb_connector">
+  <a href="https://github.com/jkaae93/adb-connector">
     <picture>
       <source srcset="assets/app_icon.svg">
       <img src="assets/app_icon.svg" alt="ADB Connector logo" width="128">
@@ -15,11 +15,11 @@
 </p>
 
 <p align="center">
-  <a href="./README.ko.md">한국어</a> · <a href="https://github.com/jkaae93/adb_connector/releases/latest">Download</a>
+  <a href="./README.ko.md">한국어</a> · <a href="https://github.com/jkaae93/adb-connector/releases/latest">Download</a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/jkaae93/adb_connector/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/jkaae93/adb_connector?style=flat-square&label=Download" /></a>
+  <a href="https://github.com/jkaae93/adb-connector/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/jkaae93/adb-connector?style=flat-square&label=Download" /></a>
   <img alt="Platform: macOS" src="https://img.shields.io/badge/macOS-Apple_Silicon_%7C_Intel-black?style=flat-square&logo=apple&logoColor=white" />
   <img alt="Flutter" src="https://img.shields.io/badge/Flutter-3.41-02569B?style=flat-square&logo=flutter&logoColor=white" />
   <a href="#license"><img alt="License" src="https://img.shields.io/badge/License-Free_to_use_and_modify-blue.svg?style=flat-square" /></a>
@@ -28,9 +28,9 @@
 <details>
 <summary><strong>Your wireless device dashboard.</strong></summary>
 
-[![Stars](https://img.shields.io/github/stars/jkaae93/adb_connector?style=flat-square&label=Stars)](https://github.com/jkaae93/adb_connector/stargazers)
-[![Last commit](https://img.shields.io/github/last-commit/jkaae93/adb_connector?style=flat-square&label=Updated)](https://github.com/jkaae93/adb_connector/commits)
-[![Issues](https://img.shields.io/github/issues/jkaae93/adb_connector?style=flat-square&label=Issues)](https://github.com/jkaae93/adb_connector/issues)
+[![Stars](https://img.shields.io/github/stars/jkaae93/adb-connector?style=flat-square&label=Stars)](https://github.com/jkaae93/adb-connector/stargazers)
+[![Last commit](https://img.shields.io/github/last-commit/jkaae93/adb-connector?style=flat-square&label=Updated)](https://github.com/jkaae93/adb-connector/commits)
+[![Issues](https://img.shields.io/github/issues/jkaae93/adb-connector?style=flat-square&label=Issues)](https://github.com/jkaae93/adb-connector/issues)
 
 </details>
 <p></p>
@@ -44,7 +44,7 @@ Our philosophy:
 ```
 
 <p align="center">
-  ⭐ Star the repo for updates · Watch <a href="https://github.com/jkaae93/adb_connector/releases">Releases</a> for new versions.
+  ⭐ Star the repo for updates · Watch <a href="https://github.com/jkaae93/adb-connector/releases">Releases</a> for new versions.
 </p>
 
 <!-- TODO: Add GIF demo of USB plug-in → wireless switch → logcat workflow -->
@@ -104,7 +104,7 @@ Download the app, then:
 
 ```bash
 # 1. Download and move to /Applications
-open https://github.com/jkaae93/adb_connector/releases/latest
+open https://github.com/jkaae93/adb-connector/releases/latest
 ```
 
 1. Drag `ADB Connector.app` into `/Applications`.

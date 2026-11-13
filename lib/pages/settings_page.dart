@@ -237,7 +237,7 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       final request = await client.getUrl(
         Uri.parse(
-          'https://api.github.com/repos/jkaae93/adb_connector/releases/latest',
+          'https://api.github.com/repos/jkaae93/adb-connector/releases/latest',
         ),
       );
       request.headers.set('User-Agent', 'ADB-Connector');
@@ -373,7 +373,7 @@ class _SettingsPageState extends State<SettingsPage> {
         if (mounted) setState(() {});
       }
       await autoUpdater.setFeedURL(
-        'https://github.com/jkaae93/adb_connector/releases/latest/download/appcast.xml',
+        'https://github.com/jkaae93/adb-connector/releases/latest/download/appcast.xml',
       );
       await autoUpdater.checkForUpdates();
     } catch (error) {

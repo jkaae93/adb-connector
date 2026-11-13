@@ -38,7 +38,7 @@ class ReleaseCheckService {
     try {
       final request = await client.getUrl(
         Uri.parse(
-          'https://api.github.com/repos/jkaae93/adb_connector/releases/latest',
+          'https://api.github.com/repos/jkaae93/adb-connector/releases/latest',
         ),
       );
       request.headers.set('User-Agent', 'ADB-Connector');
